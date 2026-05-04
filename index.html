@@ -1,629 +1,234 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ellem - Local LM Studio Chat With a Great UI</title>
 
-  <!-- Bootstrap 5 (Dark theme via data-bs-theme="dark") -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ellem — Local AI with a Great UI</title>
 
-  <!-- Inter font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/theme.css" rel="stylesheet">
 
-  <!-- Font Awesome -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet"/>
-
-  <!-- highlight.js -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-
-  <!-- marked -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-  <!-- DOMPurify for sanitization -->
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
-
-  <!-- MathJax (optional latex) -->
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']] },
-      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-
-  <!-- jQuery & Bootstrap bundle -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <style>
-    :root { --radius: .5rem; --chat-width: 260px; font-family: 'Inter', sans-serif; }
-    html,body,#app { height:100%; }
-    body { background: linear-gradient(180deg,#0f0f12,#121218); color: #e6e6e6; margin:0; padding:0; }
-    #server-row { gap:.5rem; }
-    #server-url { min-width: 0; }
-    #chat-section { display:flex; flex-direction:column; height: calc(100vh - 110px); padding: 1rem; }
-    #chat-container { flex:1; overflow:auto; padding:1rem; border-radius: .5rem; background: rgba(255,255,255,0.02); }
-    .message { max-width: 86%; padding:.75rem 1rem; border-radius: .6rem; margin-bottom:.75rem; word-break: break-word; box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
-    .message.user { margin-left:auto; background:#2b163b; color:#fff; }
-    .message.assistant { margin-right:auto; background:#171421; color:#e9e9ff; }
-    .message .meta { font-size:.8rem; color:#bfb2e6; margin-bottom:.25rem; font-weight:600; }
-    .message pre { background:#111; color:#dfe7ff; padding:.6rem; border-radius:.4rem; overflow:auto; }
-    .copy-btn { position:absolute; top:6px; right:6px; z-index:2; font-size:.75rem; padding:.15rem .4rem; border-radius:.35rem; }
-    #input-row { gap:.5rem; align-items:end; }
-    #user-input { resize: vertical; min-height:48px; max-height:200px; background:transparent; border-radius:.5rem; color:inherit; }
-    #chat-sidebar { width:var(--chat-width); height: calc(100vh - 110px); overflow:auto; background: rgba(255,255,255,0.02); border-right:1px solid rgba(255,255,255,0.03); padding: .75rem; }
-    .chat-item { padding:.5rem; border-radius:.4rem; cursor:pointer; margin-bottom:.4rem; }
-    .chat-item.active { background: linear-gradient(90deg,#2b163b,#2f1649); font-weight:600; }
-    #context-menu { position:absolute; display:none; z-index:2000; }
-    @media (max-width: 768px) {
-      #chat-sidebar { display:none; }
-      #chat-section { height: calc(100vh - 160px); padding:.5rem; }
-    }
-  </style>
 </head>
-<body>
-  <div id="app" class="container-fluid p-3">
-    <!-- Top row: server url + model select + connect -->
-    <div class="row mb-2 align-items-center" id="server-row">
-      <div class="col-md-3 col-lg-2">
-        <input id="server-url" class="form-control form-control-dark" placeholder="http://localhost:8080 (LM Studio)" />
-      </div>
-      <div class="col-md-3 col-lg-2">
-        <select id="model-select" class="form-select form-select-dark" disabled>
-          <option value="">Select model</option>
-        </select>
-      </div>
-      <div class="col-auto">
-        <button id="connect-button" class="btn btn-primary"><i class="fas fa-plug"></i> Connect</button>
-        <button id="abort-button" class="btn btn-outline-warning ms-1" title="Abort streaming" disabled><i class="fas fa-stop"></i></button>
-      </div>
-      <div class="col ms-auto text-end">
-        <span id="connection-status" class="small text-muted">Disconnected</span>
-      </div>
-    </div>
 
-    <div class="row g-2">
-      <!-- Sidebar left -->
-      <div class="col-auto">
-        <div id="chat-sidebar" class="shadow-sm">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="m-0">Chats</h6>
-            <div>
-              <button id="new-chat-btn" class="btn btn-sm btn-outline-light" title="New Chat"><i class="fas fa-plus"></i></button>
-            </div>
-          </div>
-          <div id="chat-list"></div>
+<body class="ellem-app">
+
+  <header class="app-header px-3 py-2">
+    <div class="d-flex align-items-center justify-content-between">
+
+      <div class="d-flex align-items-center brand">
+
+        <img src="images/ellem.png" alt="Ellem logo" class="brand-logo me-2" style="max-height:48px">
+
+        <div class="brand-text">
+          <h1 class="brand-title mb-0">Ellem</h1>
+          <small class="brand-tagline">Local AI with a Great UI</small>
         </div>
+
       </div>
 
-      <!-- Main chat -->
-      <div class="col">
-        <div id="chat-section" class="shadow-sm">
-          <div id="chat-container" aria-live="polite"></div>
+      <div class="server-indicator">
 
-          <!-- Input area -->
-          <div class="mt-3">
-            <div class="row align-items-center" id="input-row">
-              <div class="col-auto">
-                <button id="upload-button" class="btn btn-outline-secondary" title="Upload image"><i class="fas fa-image"></i></button>
-                <input type="file" id="image-upload" accept="image/*" style="display:none;">
-              </div>
-              <div class="col">
-                <!-- textarea for multi-line and pastes -->
-                <textarea id="user-input" class="form-control form-control-dark" placeholder="Type a message or paste code... (press Enter to send — Shift+Enter for newline)" rows="2" disabled></textarea>
-              </div>
-              <div class="col-auto">
-                <button id="send-button" class="btn btn-success" disabled><i class="fas fa-paper-plane"></i></button>
-              </div>
-            </div>
-            <div class="mt-2 d-flex justify-content-between small text-muted">
-              <div id="paste-hint">Paste code and it will be auto-detected and wrapped in a code block.</div>
-              <div id="model-hint"></div>
-            </div>
-          </div>
-        </div>
+        <span id="connection-badge" class="badge bg-secondary">
+          Disconnected
+        </span>
+
       </div>
+
     </div>
+  </header>
 
-    <!-- custom context menu -->
-    <div id="context-menu" class="card bg-dark text-light p-2">Delete chat</div>
+
+  <div class="container-fluid app-container">
+
+    <div class="row flex-nowrap h-100">
+
+      <!-- Sidebar -->
+
+      <aside class="col-auto sidebar px-0">
+
+        <div class="sidebar-inner d-flex flex-column">
+
+          <div class="sidebar-header p-3">
+
+            <button class="btn btn-primary w-100 mb-2">
+              + New Chat
+            </button>
+
+            <input type="search" class="form-control form-control-sm" placeholder="Search chats"
+              aria-label="Search chats">
+
+          </div>
+
+          <div class="chat-list flex-grow-1 overflow-auto">
+
+            <ul id="chat-list" class="list-group list-group-flush"></ul>
+
+          </div>
+
+          <div class="sidebar-footer p-3">
+
+            <div class="mb-2">
+
+              <label class="form-label small">Server</label>
+
+              <select id="server-select" class="form-select form-select-sm"></select>
+
+              <button id="add-server-btn" class="btn btn-outline-light btn-sm w-100 mt-2">
+                Add Server
+              </button>
+
+            </div>
+
+            <div class="mb-2">
+
+              <label class="form-label small">Model</label>
+
+              <select id="model-select" class="form-select form-select-sm"></select>
+
+            </div>
+
+            <div class="d-grid gap-2">
+
+              <button class="btn btn-outline-light btn-sm">
+                Import Chats
+              </button>
+
+              <button class="btn btn-outline-light btn-sm">
+                Export Chats
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </aside>
+
+
+      <!-- Chat Area -->
+
+      <main class="col chat-area">
+
+        <div class="chat-wrapper d-flex flex-column h-100">
+
+          <!-- Chat messages -->
+
+          <div class="chat-messages flex-grow-1 overflow-auto p-4" id="chat-messages" aria-live="polite">
+          </div>
+
+
+          <!-- Input -->
+
+          <div class="chat-input-area p-3">
+
+            <form>
+
+              <div class="input-group">
+
+                <textarea id="chat-input" class="form-control chat-input" rows="2"
+                  placeholder="Send a message..."></textarea>
+
+                <button type="button" id="send-button" class="btn btn-primary send-button">
+                  Send
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      </main>
+
+    </div>
   </div>
 
-<script>
-  // --- Configuration & globals ---
-  const $serverUrl = $('#server-url');
-  const $modelSelect = $('#model-select');
-  const $connectBtn = $('#connect-button');
-  const $connectionStatus = $('#connection-status');
-  const $sendBtn = $('#send-button');
-  const $userInput = $('#user-input');
-  const $chatContainer = $('#chat-container');
-  const $chatList = $('#chat-list');
-  const $newChatBtn = $('#new-chat-btn');
-  const $uploadBtn = $('#upload-button');
-  const $imageUpload = $('#image-upload');
-  const $abortBtn = $('#abort-button');
-  const $contextMenu = $('#context-menu');
-  let chats = [];
-  let currentChat = null;
-  let isConnected = false;
-  let currentModel = '';
-  let streamController = null;   // AbortController for streaming
-  let reconnectAttempts = 0;
-  const MAX_RECONNECT = 6;
-  const RECONNECT_BASE_MS = 1000;
 
-  // marked options
-  marked.setOptions({ gfm:true, breaks:true, headerIds:false });
+  <!-- Status Bar -->
 
-  // Utility: sanitize HTML using DOMPurify
-  function sanitizeHtml(html) {
-    return DOMPurify.sanitize(html);
-  }
+  <footer class="status-bar px-3 py-2">
 
-  // Utility: create message DOM and append (sanitized)
-  function appendMessage({contentMarkdown, isUser=false, model=null, metrics=null, isImage=false}) {
-    // Render markdown -> html, sanitize, then set
-    let rawHtml = marked.parse(contentMarkdown);
-    rawHtml = sanitizeHtml(rawHtml);
+    <div class="d-flex justify-content-between align-items-center">
 
-    const $msg = $('<div>').addClass('message ' + (isUser ? 'user' : 'assistant'));
-    const meta = $('<div>').addClass('meta').text(isUser ? 'You' : 'Assistant');
-    $msg.append(meta);
-    if (!isUser && model) {
-      $msg.append($('<div>').addClass('small text-muted').text(model));
-    }
-    const $content = $('<div>').addClass('content').html(rawHtml);
-    $msg.append($content);
-    if (metrics) {
-      $msg.append($('<div>').addClass('small text-muted text-end').text(metrics));
-    }
+      <div id="status-connection">
+        Not connected
+      </div>
 
-    // add copy buttons to code blocks (deferred to after insertion)
-    $chatContainer.append($msg);
-    $chatContainer.scrollTop($chatContainer.prop('scrollHeight'));
+    <div id="status-performance" class="text-end">
+        VRAM: -- | Tokens/sec: -- | Latency: -- | Model: --
+    </div>
 
-    // highlight code
-    $msg.find('pre code').each((i, el) => hljs.highlightElement(el));
-    addCopyButtons($msg);
-    if (typeof MathJax !== 'undefined') {
-      MathJax.typesetPromise([$msg[0]]).catch(e => console.error('MathJax error', e));
-    }
+    </div>
 
-    // store in chat history
-    if (!currentChat) return;
-    currentChat.messages.push({ contentMarkdown, isUser, model, metrics, isImage });
-    saveChatsToLocal();
-  }
+  </footer>
 
-  // Add copy buttons to <pre> elements
-  function addCopyButtons($container) {
-    $container.find('pre').each(function() {
-      const $pre = $(this);
-      if ($pre.find('.copy-btn').length) return;
-      const $btn = $('<button class="btn btn-sm btn-outline-secondary copy-btn"><i class="fas fa-copy"></i> Copy</button>');
-      $btn.css({ position:'absolute' }).on('click', () => {
-        const txt = $pre.text();
-        navigator.clipboard.writeText(txt).then(() => {
-          $btn.text('Copied!');
-          setTimeout(()=> $btn.html('<i class="fas fa-copy"></i> Copy'), 1500);
-        }).catch(err => {
-          console.error('copy failed', err);
-        });
-      });
-      $pre.css('position','relative').append($btn);
-    });
-  }
 
-  // --- Chat management: create, list, load, delete ---
-  function createNewChat() {
-    const id = Date.now().toString();
-    const chat = { id, name: `Conversation ${chats.length+1}`, messages: [] };
-    chats.unshift(chat);
-    currentChat = chat;
-    renderChatList();
-    loadChat(chat);
-    saveChatsToLocal();
-  }
-  function renderChatList() {
-    $chatList.empty();
-    chats.forEach(chat => {
-      const $item = $('<div>').addClass('chat-item').text(chat.name).attr('data-id', chat.id);
-      if (currentChat && chat.id === currentChat.id) $item.addClass('active');
-      $item.on('click', () => { currentChat = chat; loadChat(chat); renderChatList(); });
-      $item.on('contextmenu', (e) => {
-        e.preventDefault();
-        showContextMenu(e.pageX, e.pageY, chat.id);
-      });
-      $chatList.append($item);
-    });
-  }
-  function loadChat(chat) {
-    $chatContainer.empty();
-    chat.messages.forEach(m => {
-      appendMessage({contentMarkdown: m.contentMarkdown || m.content, isUser: m.isUser, model: m.model, isImage: m.isImage});
-    });
-  }
-  function deleteChat(chatId) {
-    chats = chats.filter(c => c.id !== chatId);
-    if (!chats.length) createNewChat();
-    currentChat = chats[0];
-    renderChatList();
-    loadChat(currentChat);
-    saveChatsToLocal();
-  }
+  <div class="modal fade" id="server-modal" tabindex="-1">
 
-  // context menu
-  function showContextMenu(x,y,chatId) {
-    $contextMenu.css({ left: x + 'px', top: y + 'px', display:'block' }).one('click', () => {
-      deleteChat(chatId);
-      $contextMenu.hide();
-    });
-    $(document).one('click', () => $contextMenu.hide());
-  }
+    <div class="modal-dialog">
+      <div class="modal-content">
 
-  // persist chats locally
-  function saveChatsToLocal() {
-    try { localStorage.setItem('lm_chats', JSON.stringify(chats)); } catch(e){}
-  }
-  function loadChatsFromLocal() {
-    try {
-      const raw = localStorage.getItem('lm_chats');
-      if (raw) chats = JSON.parse(raw) || [];
-    } catch(e){ chats = []; }
-    if (!chats.length) createNewChat();
-    else { currentChat = chats[0]; renderChatList(); loadChat(currentChat); }
-  }
+        <div class="modal-header">
+          <h5 class="modal-title">Add Server</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
 
-  // --- Connection handling & model listing ---
-  async function fetchModels(serverUrl) {
-    const res = await fetch(`${serverUrl.replace(/\/+$/,'')}/v1/models`, { headers:{ 'Content-Type':'application/json' } });
-    if (!res.ok) throw new Error('Failed to fetch models');
-    const json = await res.json();
-    return json.data || [];
-  }
+        <div class="modal-body">
 
-  async function connect() {
-    const serverUrl = $serverUrl.val().trim();
-    if (!serverUrl) { setStatus('Enter server URL', false); return; }
-    setStatus('Connecting...', false);
-    try {
-      const models = await fetchModels(serverUrl);
-      $modelSelect.empty();
-      models.forEach(m => $modelSelect.append($('<option>').val(m.id).text(m.id)));
-      $modelSelect.prop('disabled', false);
-      currentModel = $modelSelect.val() || '';
-      isConnected = true;
-      reconnectAttempts = 0;
-      $userInput.prop('disabled', false);
-      $sendBtn.prop('disabled', false);
-      $connectBtn.text('Disconnect').removeClass('btn-primary').addClass('btn-danger');
-      setStatus('Connected', true);
-      appendMessage({contentMarkdown:'Connected to LM Studio server. You can start chatting now!', isUser:false, model:null});
-    } catch(err) {
-      console.error('connect error', err);
-      isConnected = false;
-      $modelSelect.prop('disabled', true);
-      $userInput.prop('disabled', true);
-      $sendBtn.prop('disabled', true);
-      setStatus('Failed to connect', false);
-      appendMessage({contentMarkdown:'Error: Unable to connect to the LM Studio server. Please check the address and try again.', isUser:false});
-    }
-  }
+          <div class="mb-3">
+            <label class="form-label">Server Name</label>
+            <input id="server-name" class="form-control">
+          </div>
 
-  function disconnect() {
-    isConnected = false;
-    $modelSelect.prop('disabled', true).val('');
-    $userInput.prop('disabled', true);
-    $sendBtn.prop('disabled', true);
-    $connectBtn.text('Connect').removeClass('btn-danger').addClass('btn-primary');
-    setStatus('Disconnected', false);
-    appendMessage({contentMarkdown:'Disconnected from LM Studio server.', isUser:false});
-  }
+          <div class="mb-3">
+            <label class="form-label">Server Type</label>
 
-  function setStatus(text, ok) {
-    $connectionStatus.text(text);
-    $connectionStatus.css('color', ok ? '#8ef' : '#f66');
-  }
+            <select id="server-type" class="form-select">
+              <option value="ollama">Ollama</option>
+              <option value="lmstudio">LM Studio</option>
+            </select>
 
-  // Try to auto-reconnect with exponential backoff
-  function scheduleReconnect() {
-    if (reconnectAttempts >= MAX_RECONNECT) {
-      setStatus('Disconnected (manual reconnect required)', false);
-      return;
-    }
-    reconnectAttempts++;
-    const delay = RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts-1);
-    setStatus(`Reconnecting in ${Math.round(delay/1000)}s...`, false);
-    setTimeout(() => {
-      if (!isConnected) connect();
-    }, delay);
-  }
+          </div>
 
-  // --- Input handling & paste code detection (Mode A) ---
-  function detectCodeLanguage(text) {
-    const trimmed = text.trim();
-    const lines = trimmed.split('\n');
-    // heuristics: prefer js if 'function' or '=>' or 'console.' or '{' '}' ; python if 'def ' or 'import ' and ':' line ends
-    const jsHints = ['function ', '=>', 'console.', 'var ', 'let ', 'const ', 'class ', ';', '{', '}'];
-    const pyHints = ['def ', 'import ', 'from ', 'self', ':'];
-    let jsScore = 0, pyScore = 0;
-    jsHints.forEach(h => { if (trimmed.includes(h)) jsScore++; });
-    pyHints.forEach(h => { if (trimmed.includes(h)) pyScore++; });
-    if (jsScore > pyScore) return 'javascript';
-    if (pyScore > jsScore) return 'python';
-    // fallback: if many lines and contains semicolon then js else plain
-    if (lines.length > 1 && trimmed.includes(';')) return 'javascript';
-    return '';
-  }
+          <div class="mb-3">
+            <label class="form-label">Server URL</label>
 
-  // On paste: auto-detect code and wrap in fenced block. Prevent HTML being inserted.
-  $userInput.on('paste', function(e) {
-    // get plain text
-    const clipboard = (e.originalEvent || e).clipboardData;
-    const text = clipboard.getData('text/plain');
-    if (!text) return; // let default
-    // Detect code if multi-line or common patterns
-    const looksLikeCode = (/[\{\};=>]|function |def |class |console\./).test(text) && text.includes('\n');
-    if (looksLikeCode) {
-      e.preventDefault();
-      const lang = detectCodeLanguage(text);
-      const fenced = `\`\`\`${lang}\n${text.replace(/\r/g,'')}\n\`\`\`\n`;
-      // insert at cursor
-      const el = this;
-      const start = el.selectionStart, end = el.selectionEnd;
-      const newVal = el.value.slice(0,start) + fenced + el.value.slice(end);
-      el.value = newVal;
-      // move cursor after inserted block
-      const pos = start + fenced.length;
-      el.setSelectionRange(pos,pos);
-    }
-    // else let default (plain text insertion). We prevented HTML as we used text/plain.
-  });
+            <input id="server-url" class="form-control" placeholder="http://localhost:11434">
 
-  // Enter to send, Shift+Enter newline
-  $userInput.on('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      $('#send-button').trigger('click');
-    }
-  });
+          </div>
 
-  // --- Image upload ---
-  $uploadBtn.on('click', () => $imageUpload.trigger('click'));
-  $imageUpload.on('change', function(){
-    const file = this.files && this.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target.result;
-      // add as user message (image + optional caption from textarea)
-      const caption = $userInput.val().trim() || "What's in this image?";
-      appendMessage({ contentMarkdown: `![image](${dataUrl})\n\n${caption}`, isUser:true, isImage:true });
-      $userInput.val('');
-    };
-    reader.readAsDataURL(file);
-    this.value = '';
-  });
+        </div>
 
-  // --- Sending message and streaming response (with AbortController) ---
-  async function sendMessage() {
-    if (!isConnected) { appendMessage({contentMarkdown:'Not connected', isUser:false}); return; }
-    const serverUrl = $serverUrl.val().trim().replace(/\/+$/,'');
-    currentModel = $modelSelect.val();
-    if (!currentModel) { appendMessage({contentMarkdown:'Select a model first', isUser:false}); return; }
-    let text = $userInput.val();
-    if (!text || !text.trim()) return;
-    // append user message
-    appendMessage({ contentMarkdown: text, isUser:true });
+        <div class="modal-footer">
+          <button type="button" id="save-server-btn" class="btn btn-primary">
+            Save Server
+          </button>
+        </div>
 
-    // Build conversation for the request
-    const messages = buildConversationHistoryForApi();
+      </div>
+    </div>
+  </div>
 
-    // Prepare streaming area
-    const assistantPlaceholder = $('<div>').addClass('message assistant').append($('<div>').addClass('meta').text('Assistant'));
-    assistantPlaceholder.append($('<div>').addClass('content').text('')); // will fill HTML
-    $chatContainer.append(assistantPlaceholder);
-    $chatContainer.scrollTop($chatContainer.prop('scrollHeight'));
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    // disable input while streaming
-    $userInput.prop('disabled', true);
-    $sendBtn.prop('disabled', true);
-    $abortBtn.prop('disabled', false);
+  <script src="js/chat-db.js"></script>
+  <script src="js/server-db.js"></script>
+  <script src="js/api-registry.js"></script>
 
-    // stream via fetch
-    streamController = new AbortController();
-    const startTime = performance.now();
-    let accumulated = '';
+  <script src="js/adapters/adapter-base.js"></script>
+  <script src="js/adapters/ollama-adapter.js"></script>
+  <script src="js/adapters/lmstudio-adapter.js"></script>
 
-    try {
-      const resp = await fetch(`${serverUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: currentModel,
-          messages: messages,
-          temperature: 0.7,
-          max_tokens: -1,
-          stream: true
-        }),
-        signal: streamController.signal,
-      });
-      if (!resp.ok) throw new Error(`Server returned ${resp.status}`);
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n').filter(l => l.trim() !== '');
-          for (const line of lines) {
-            if (line.startsWith('data:')) {
-              const dataStr = line.slice(5).trim();
-              if (dataStr === '[DONE]') { done = true; break; }
-              try {
-                const parsed = JSON.parse(dataStr);
-                const delta = parsed.choices && parsed.choices[0] && parsed.choices[0].delta;
-                if (delta && delta.content) {
-                  accumulated += delta.content;
-                  // render to placeholder: convert markdown -> html sanitized
-                  const html = sanitizeHtml(marked.parse(accumulated));
-                  assistantPlaceholder.find('.content').html(html);
-                  assistantPlaceholder.find('pre code').each((i, el) => hljs.highlightElement(el));
-                  addCopyButtons(assistantPlaceholder);
-                  if (typeof MathJax !== 'undefined') {
-                    MathJax.typesetPromise([assistantPlaceholder[0]]).catch(e => console.error(e));
-                  }
-                  $chatContainer.scrollTop($chatContainer.prop('scrollHeight'));
-                }
-              } catch(err) {
-                console.error('parse error', err);
-              }
-            } else if (line.startsWith('event:')) {
-              const ev = line.slice(6).trim();
-              if (ev === 'error') {
-                appendMessage({contentMarkdown:'Error: server event error', isUser:false});
-                done = true;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      const endTime = performance.now();
-      const elapsed = ((endTime - startTime)/1000).toFixed(2) + 's';
-      // store assistant message in current chat
-      if (currentChat) {
-        currentChat.messages.push({ contentMarkdown: accumulated, isUser:false, model:currentModel });
-        if (currentChat.name.startsWith('Conversation')) {
-          const snippet = accumulated.split(/\s+/).slice(0,7).join(' ');
-          if (snippet) currentChat.name = `Conversation: ${snippet}...`;
-        }
-        saveChatsToLocal();
-        renderChatList();
-      }
-    } catch(err) {
-      if (err.name === 'AbortError') {
-        appendMessage({contentMarkdown:'(Stream aborted)', isUser:false});
-      } else {
-        console.error('stream error', err);
-        appendMessage({contentMarkdown:'Error: Unable to get a response from the server.','isUser':false});
-        // on major network error, mark disconnected and attempt reconnect
-        isConnected = false;
-        disconnect();
-        scheduleReconnect();
-      }
-    } finally {
-      // ensure placeholder content is cleaned/sanitized and consistent with stored chat entry
-      $userInput.prop('disabled', false).focus();
-      $sendBtn.prop('disabled', false);
-      $abortBtn.prop('disabled', true);
-      streamController = null;
-    }
-    $userInput.val('');
-  }
-
-  // Build conversation history for API based on stored messages
-  function buildConversationHistoryForApi() {
-    const systemPrompt = currentChat && currentChat.messages.some(m => m.isImage)
-      ? "You are an AI assistant that analyses images."
-      : "You are an intelligent assistant. Always provide helpful, correct and well-reasoned answers.";
-    const history = [{ role:'system', content:systemPrompt }];
-    currentChat.messages.forEach(m => {
-      history.push({ role: m.isUser ? 'user' : 'assistant', content: m.contentMarkdown || m.content });
-    });
-    return history;
-  }
-
-  // Eject model when switching (best-effort)
-  async function ejectModel(oldModel) {
-    const serverUrl = $serverUrl.val().trim().replace(/\/+$/,'');
-    try {
-      await fetch(`${serverUrl}/v1/model/eject`, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model: oldModel })
-      });
-      console.log('ejected', oldModel);
-    } catch(e) { console.warn('eject failed', e); }
-  }
-
-  // Abort button for streaming
-  $abortBtn.on('click', () => {
-    if (streamController) {
-      streamController.abort();
-      $abortBtn.prop('disabled', true);
-    }
-  });
-
-  // Wire up connect/disconnect
-  $connectBtn.on('click', () => {
-    if (isConnected) disconnect();
-    else connect();
-  });
-
-  // model change: eject previous model if switched
-  $modelSelect.on('change', function(){
-    const newModel = $(this).val();
-    if (currentModel && currentModel !== newModel) {
-      $modelSelect.prop('disabled', true);
-      ejectModel(currentModel).finally(()=> {
-        currentModel = newModel;
-        $modelSelect.prop('disabled', false);
-      });
-    } else {
-      currentModel = newModel;
-    }
-  });
-
-  // send button
-  $sendBtn.on('click', sendMessage);
-
-  // new chat
-  $newChatBtn.on('click', createNewChat);
-
-  // keyboard shortcuts: Ctrl+K focus server
-  $(document).on('keydown', function(e){ if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $serverUrl.focus(); } });
-
-  // load saved chats
-  loadChatsFromLocal();
-
-  // load last server url from localStorage
-  (function restoreSettings(){
-    try {
-      const lastUrl = localStorage.getItem('lm_server_url') || '';
-      $serverUrl.val(lastUrl);
-    } catch(e){}
-  })();
-
-  // store server url on change
-  $serverUrl.on('change', function(){ try { localStorage.setItem('lm_server_url', $(this).val()); } catch(e){} });
-
-  // image messages: clicking an image in chat to view in new tab
-  $chatContainer.on('click', 'img', function(){ window.open($(this).attr('src'), '_blank'); });
-
-  // prevent right click default on chat container to allow custom menu elsewhere
-  $(document).on('contextmenu', function(e){
-    // but do not prevent contextmenu on input or on chat items
-    if ($(e.target).closest('#chat-list').length) return;
-  });
-
-  // Initialize small UI hints
-  $('#model-hint').text('');
-
-  // Expose a manual reconnect when user clicks status text
-  $connectionStatus.on('click', () => { if (!isConnected) connect(); });
-
-  // On load: small warm-up
-  $(function(){
-    // Highlight any code already present (if local chats had code)
-    $chatContainer.find('pre code').each((i, el) => hljs.highlightElement(el));
-  });
-
-</script>
+  <script src="js/chat-manager.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
+
 </html>
