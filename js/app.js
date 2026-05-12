@@ -30,6 +30,10 @@ class EllemApp {
             // Apply saved theme
             this.loadTheme();
 
+            // Initialize status bar
+            statusBar.reset();
+            statusBar.render();
+
             console.log('Ellem initialized successfully');
         } catch (error) {
             console.error('Failed to initialize Ellem:', error);
@@ -83,6 +87,11 @@ class EllemApp {
             if (model && engineManager.isConnected()) {
                 engineManager.setModel(model);
                 UI.showToast(`Model changed to ${model}`);
+
+                // Update status bar with model info
+                // Context size varies by model, using common defaults
+                const contextSize = 4096; // Default context window
+                statusBar.updateModel(model, contextSize);
             }
         });
 
@@ -256,6 +265,7 @@ class EllemApp {
                         await engineManager.disconnect();
                         UI.updateConnectionStatus(false);
                         UI.setInputEnabled(false);
+                        statusBar.reset();
                     }
 
                     // Refresh the modal
@@ -382,12 +392,16 @@ class EllemApp {
         try {
             UI.showToast('Connecting to server...');
             UI.updateConnectionStatus(false);
+            statusBar.updateConnection(false);
 
             const result = await engineManager.connect(profile);
 
             UI.updateConnectionStatus(true, profile.name);
             UI.updateStats(result.stats);
             UI.setInputEnabled(true);
+
+            // Update status bar with connection info
+            statusBar.updateConnection(true, profile.type.toUpperCase(), null);
 
             // Load models
             const models = await engineManager.getModels();
@@ -400,12 +414,16 @@ class EllemApp {
                 const firstModel = models[0].name || models[0].id || models[0];
                 $('#modelSelect').val(firstModel);
                 engineManager.setModel(firstModel);
+
+                // Update status bar with model
+                statusBar.updateModel(firstModel, 4096);
             }
 
         } catch (error) {
             console.error('Connection failed:', error);
             UI.showToast('Failed to connect to server', 'error');
             UI.updateConnectionStatus(false);
+            statusBar.updateConnection(false);
         }
     }
 
@@ -437,6 +455,11 @@ class EllemApp {
         // Disable input while processing
         UI.setInputEnabled(false);
 
+        // Start performance tracking
+        statusBar.startRequest();
+        const startTime = Date.now();
+        let tokenCount = 0;
+
         try {
             // Create streaming message
             const messageId = 'msg_' + Date.now();
@@ -448,7 +471,17 @@ class EllemApp {
             await engineManager.streamMessage(message, (chunk) => {
                 fullResponse += chunk;
                 UI.updateStreamingMessage(messageId, fullResponse);
+
+                // Estimate token count (rough approximation: ~4 chars per token)
+                tokenCount = Math.floor(fullResponse.length / 4);
             });
+
+            // Calculate final metrics
+            const duration = Date.now() - startTime;
+            const finalTokenCount = Math.floor(fullResponse.length / 4);
+
+            // End performance tracking
+            statusBar.endRequest(finalTokenCount);
 
             // Save AI response
             this.currentMessages.push({
@@ -466,6 +499,7 @@ class EllemApp {
         } catch (error) {
             console.error('Failed to send message:', error);
             UI.showToast('Failed to send message', 'error');
+            statusBar.endRequest(0);
         } finally {
             UI.setInputEnabled(true);
             $('#messageInput').focus();
