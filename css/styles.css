@@ -5,23 +5,23 @@
 
 /* CSS Variables for Theming - Tailwind Color Palette */
 :root {
-    /* Dark Mode - Tailwind Slate/Gray Dark Theme */
-    --primary-bg: #0f172a;          /* slate-900 */
-    --secondary-bg: #1e293b;        /* slate-800 */
-    --tertiary-bg: #334155;         /* slate-700 */
+    /* Dark Mode - Ultra Dark Theme - Maximum Darkness */
+    --primary-bg: #000000;          /* Pure black - Maximum darkness */
+    --secondary-bg: #0a0a0a;        /* Near black - Subtle elevation */
+    --tertiary-bg: #141414;         /* Very dark gray - Hover states */
     --accent-color: #3b82f6;        /* blue-500 */
-    --accent-hover: #2563eb;        /* blue-600 */
-    --text-primary: #f1f5f9;        /* slate-100 */
-    --text-secondary: #cbd5e1;      /* slate-300 */
-    --text-muted: #94a3b8;          /* slate-400 */
-    --border-color: #475569;        /* slate-600 */
-    --shadow-color: rgba(0, 0, 0, 0.3);
-    --glow-color: rgba(59, 130, 246, 0.5);
-    --message-user-bg: #1e3a8a;     /* blue-900 */
-    --message-ai-bg: #334155;       /* slate-700 */
-    --input-bg: #1e293b;            /* slate-800 */
-    --scrollbar-track: #0f172a;     /* slate-900 */
-    --scrollbar-thumb: #475569;     /* slate-600 */
+    --accent-hover: #60a5fa;        /* blue-400 - Brighter hover */
+    --text-primary: #f1f5f9;        /* slate-100 - Main text */
+    --text-secondary: #cbd5e1;      /* slate-300 - Secondary text */
+    --text-muted: #94a3b8;          /* slate-400 - Muted text */
+    --border-color: #1e1e1e;        /* Very dark gray - Subtle borders */
+    --shadow-color: rgba(0, 0, 0, 0.8);  /* Deep shadows */
+    --glow-color: rgba(59, 130, 246, 0.3);
+    --message-user-bg: #0d1b2a;     /* Very dark blue */
+    --message-ai-bg: #0f0f0f;       /* Near black - Messages */
+    --input-bg: #0a0a0a;            /* Near black - Input */
+    --scrollbar-track: #000000;     /* Pure black */
+    --scrollbar-thumb: #2a2a2a;     /* Dark gray - Visible scrollbar */
 
     /* Tailwind Spacing Scale - Compact */
     --spacing-xs: 0.25rem;    /* 4px - Tailwind p-1 */
